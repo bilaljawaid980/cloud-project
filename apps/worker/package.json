@@ -1,0 +1,12 @@
+{
+  "name": "@clipforge/worker",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "dev": "bun --watch src/index.ts"
+  },
+  "dependencies": {
+    "@clipforge/shared": "workspace:*"
+  }
+}

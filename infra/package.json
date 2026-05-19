@@ -1,0 +1,19 @@
+{
+  "name": "@clipforge/infra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./bin/clipforge.ts --outdir ./dist --target bun",
+    "cdk:synth": "cdk synth",
+    "cdk:deploy": "cdk deploy"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.196.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.8.3"
+  }
+}

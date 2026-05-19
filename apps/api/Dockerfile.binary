@@ -1,0 +1,28 @@
+FROM oven/bun:1-slim AS builder
+
+WORKDIR /app
+
+COPY package.json bun.lock ./
+COPY apps/api/package.json apps/api/package.json
+COPY packages/shared/package.json packages/shared/package.json
+
+RUN bun install --frozen-lockfile
+
+COPY packages/shared packages/shared
+COPY apps/api apps/api
+
+RUN bun build ./apps/api/src/server.ts --compile --target=bun-linux-x64-baseline --outfile ./dist/clipforge-api
+
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/dist/clipforge-api /usr/local/bin/clipforge-api
+
+RUN chmod +x /usr/local/bin/clipforge-api
+
+EXPOSE 3000
+
+CMD ["/usr/local/bin/clipforge-api"]

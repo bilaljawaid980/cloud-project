@@ -1,0 +1,23 @@
+{
+  "name": "@clipforge/api",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "build": "bun build ./src/server.ts --outdir ./dist --target bun",
+    "start": "bun src/server.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.821.0",
+    "@aws-sdk/client-s3": "^3.821.0",
+    "@aws-sdk/client-sqs": "^3.821.0",
+    "@aws-sdk/cloudfront-signer": "^3.821.0",
+    "@aws-sdk/lib-dynamodb": "^3.821.0",
+    "@aws-sdk/s3-request-presigner": "^3.821.0",
+    "@clipforge/shared": "workspace:*",
+    "hono": "^4.8.3",
+    "jose": "^5.10.0",
+    "nanoid": "^5.1.5",
+    "zod": "^3.25.76"
+  }
+}

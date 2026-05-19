@@ -1,0 +1,17 @@
+{
+  "name": "@clipforge/shared",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./constants": "./src/constants.ts",
+    "./types": "./src/types.ts",
+    "./schemas": "./src/schemas.ts"
+  },
+  "types": "./src/types.ts",
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}

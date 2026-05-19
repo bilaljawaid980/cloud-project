@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+*.env
+.clipforge-storage/
+.codex-runtime/
+cdk.out/
+.cdk.staging/
+coverage/
+*.js.map
+apps/web/dist/
+apps/web/.vite/
+*.d.ts.map

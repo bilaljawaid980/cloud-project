@@ -1,0 +1,20 @@
+FROM public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 AS adapter
+FROM oven/bun:1-slim
+
+WORKDIR /app
+
+COPY --from=adapter /lambda-adapter /opt/extensions/lambda-adapter
+COPY package.json bun.lock ./
+COPY apps/api/package.json apps/api/package.json
+COPY packages/shared/package.json packages/shared/package.json
+
+RUN bun install --frozen-lockfile
+
+COPY packages/shared packages/shared
+COPY apps/api apps/api
+
+ENV PORT=8080
+ENV AWS_LWA_PORT=8080
+ENV AWS_LWA_READINESS_CHECK_PATH=/health
+
+CMD ["bun", "run", "apps/api/src/server.ts"]
