@@ -326,6 +326,7 @@ Frontend build variables:
 | Variable | Purpose |
 | --- | --- |
 | `API_BASE_URL` | API URL compiled into the Vite app. |
+| `FALLBACK_API_BASE_URL` | Optional fallback API URL used only if the primary API domain has a network-level failure. |
 | `DEV_MODE` | Frontend dev-mode flag compiled into the Vite app. |
 
 ## Local Run Commands
@@ -419,6 +420,7 @@ Build and upload frontend:
 ```powershell
 cd ..
 $env:API_BASE_URL='https://api.clipforged.xyz'
+$env:FALLBACK_API_BASE_URL='https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/'
 $env:DEV_MODE='false'
 bun run build:web
 aws s3 sync apps\web\dist s3://clipforgestack-frontendbucketefe2e19c-5wgb7faigkjr --delete
@@ -489,3 +491,4 @@ The deployed app was tested after custom-domain deployment:
 | Account sign-in | `200 OK` |
 | Wrong password rejection | `401` |
 | Multipart upload/playback through `api.clipforged.xyz` | Passed |
+| Frontend API fallback for network-level API domain failures | Enabled |

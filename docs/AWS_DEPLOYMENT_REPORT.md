@@ -531,6 +531,7 @@ When frontend changes:
 
 ```powershell
 $env:API_BASE_URL='https://api.clipforged.xyz'
+$env:FALLBACK_API_BASE_URL='https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/'
 $env:DEV_MODE='false'
 bun run build:web
 aws s3 sync apps\web\dist s3://clipforgestack-frontendbucketefe2e19c-5wgb7faigkjr --delete
@@ -597,6 +598,8 @@ After fixing the browser login issue, these production checks were run successfu
 | Public share lookup | `200 OK`, status `ready` |
 | Playback URL generation through `api.clipforged.xyz` | `200 OK`, mode `s3-presigned` |
 | Fetch generated playback URL from S3 | `200 OK` |
+| Frontend bundle points to `api.clipforged.xyz` | Passed |
+| Frontend bundle has raw Lambda URL fallback for network-level failures | Passed |
 | Patch video metadata | `200 OK` |
 | Abort multipart upload | `200 OK` |
 | Delete video | `200 OK` |

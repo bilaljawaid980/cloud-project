@@ -33,6 +33,7 @@ bunx aws-cdk deploy --require-approval never
 ```bash
 bun install
 API_BASE_URL=https://api.clipforged.xyz \
+FALLBACK_API_BASE_URL=https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/ \
 DEV_MODE=false \
 bun run build:web
 ```

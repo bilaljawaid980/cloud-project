@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       __API_BASE_URL__: JSON.stringify(env.API_BASE_URL ?? "http://localhost:3000"),
+      __FALLBACK_API_BASE_URL__: JSON.stringify(env.FALLBACK_API_BASE_URL),
       __DEV_MODE__: JSON.stringify((env.DEV_MODE ?? "true") === "true")
     },
     server: {

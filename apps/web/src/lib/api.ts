@@ -17,6 +17,28 @@ interface RequestOptions extends RequestInit {
   auth?: boolean;
 }
 
+const buildApiUrl = (baseUrl: string, path: string): string => {
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${normalizedBaseUrl}${normalizedPath}`;
+};
+
+const fetchWithApiFallback = async (
+  path: string,
+  options: RequestInit
+): Promise<Response> => {
+  try {
+    return await fetch(buildApiUrl(env.apiBaseUrl, path), options);
+  } catch (error) {
+    const fallbackBaseUrl = env.fallbackApiBaseUrl?.trim();
+    if (!fallbackBaseUrl || fallbackBaseUrl === env.apiBaseUrl) {
+      throw error;
+    }
+
+    return await fetch(buildApiUrl(fallbackBaseUrl, path), options);
+  }
+};
+
 export const apiRequest = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
   const headers = new Headers(options.headers);
 
@@ -33,12 +55,19 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
     }
   }
 
-  const baseUrl = env.apiBaseUrl.replace(/\/+$/, "");
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const response = await fetch(`${baseUrl}${normalizedPath}`, {
-    ...options,
-    headers
-  });
+  let response: Response;
+  try {
+    response = await fetchWithApiFallback(path, {
+      ...options,
+      headers
+    });
+  } catch (error) {
+    throw new ApiClientError(
+      "Could not reach the API. Please refresh and try again.",
+      0,
+      error
+    );
+  }
 
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const payload = isJson ? ((await response.json()) as unknown) : undefined;
