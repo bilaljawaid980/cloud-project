@@ -126,6 +126,7 @@ export const fromUserProfileItem = (item: Record<string, unknown>): UserProfile 
     userId: typed.userId,
     email: typed.email,
     name: typed.name,
+    passwordHash: typed.passwordHash,
     createdAt: typed.createdAt,
     updatedAt: typed.updatedAt
   };

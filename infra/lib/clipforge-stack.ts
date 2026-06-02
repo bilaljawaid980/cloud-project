@@ -7,11 +7,14 @@ import {
   Stack,
   type StackProps
 } from "aws-cdk-lib";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as route53 from "aws-cdk-lib/aws-route53";
+import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { Construct } from "constructs";
@@ -23,8 +26,30 @@ export class ClipForgeStack extends Stack {
     const isProd = (process.env.NODE_ENV ?? "development") === "production";
     const removalPolicy = isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
     const appOrigin = process.env.APP_ORIGIN ?? "http://localhost:5173";
+    const appOrigins = appOrigin
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+    const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:3000";
     const jwtSecret = process.env.JWT_SECRET ?? "replace-me-with-a-32-plus-char-secret";
+    const appDomainName = process.env.APP_DOMAIN_NAME;
+    const appHostedZoneName = process.env.APP_HOSTED_ZONE_NAME ?? appDomainName;
     const repoRoot = path.join(__dirname, "../..");
+    const appDomainAliases = appDomainName ? [appDomainName, `www.${appDomainName}`] : [];
+    const appHostedZone =
+      appDomainName && appHostedZoneName
+        ? route53.HostedZone.fromLookup(this, "AppHostedZone", {
+            domainName: appHostedZoneName
+          })
+        : undefined;
+    const frontendCertificate =
+      appDomainName && appHostedZone
+        ? new acm.Certificate(this, "FrontendCertificate", {
+            domainName: appDomainName,
+            subjectAlternativeNames: [`www.${appDomainName}`],
+            validation: acm.CertificateValidation.fromDns(appHostedZone)
+          })
+        : undefined;
 
     const frontendBucket = new s3.Bucket(this, "FrontendBucket", {
       bucketName: process.env.APP_ASSETS_BUCKET,
@@ -44,7 +69,7 @@ export class ClipForgeStack extends Stack {
         {
           allowedHeaders: ["*"],
           allowedMethods: [s3.HttpMethods.PUT],
-          allowedOrigins: [appOrigin],
+          allowedOrigins: appOrigins,
           exposedHeaders: ["ETag"],
           maxAge: 3000
         }
@@ -83,9 +108,12 @@ export class ClipForgeStack extends Stack {
 
     const frontendDistribution = new cloudfront.Distribution(this, "FrontendDistribution", {
       defaultRootObject: "index.html",
+      domainNames: appDomainAliases.length > 0 ? appDomainAliases : undefined,
+      certificate: frontendCertificate,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket),
-        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
       },
       errorResponses: [
         {
@@ -101,6 +129,20 @@ export class ClipForgeStack extends Stack {
       ],
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100
     });
+
+    if (appDomainName && appHostedZone) {
+      new route53.ARecord(this, "FrontendRootAliasRecord", {
+        zone: appHostedZone,
+        recordName: appDomainName,
+        target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(frontendDistribution))
+      });
+
+      new route53.ARecord(this, "FrontendWwwAliasRecord", {
+        zone: appHostedZone,
+        recordName: `www.${appDomainName}`,
+        target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(frontendDistribution))
+      });
+    }
 
     const videoDistribution = new cloudfront.Distribution(this, "VideoDistribution", {
       defaultBehavior: {
@@ -175,7 +217,22 @@ export class ClipForgeStack extends Stack {
     });
 
     const apiImage = lambda.DockerImageCode.fromImageAsset(repoRoot, {
-      file: "apps/api/Dockerfile.lambda"
+      file: "apps/api/Dockerfile.lambda",
+      exclude: [
+        ".git",
+        ".codex-runtime",
+        ".clipforge-storage",
+        "node_modules",
+        "**/node_modules",
+        ".env",
+        ".env.*",
+        "dist",
+        "apps/*/dist",
+        "infra/cdk.out",
+        "infra/dist",
+        "infra/node_modules",
+        "cdk.out"
+      ]
     });
 
     const apiFunction = new lambda.DockerImageFunction(this, "ApiFunction", {
@@ -188,8 +245,7 @@ export class ClipForgeStack extends Stack {
         DEV_MODE: isProd ? "false" : "true",
         PORT: "8080",
         APP_ORIGIN: appOrigin,
-        API_BASE_URL: "http://localhost:3000",
-        AWS_REGION: this.region,
+        API_BASE_URL: apiBaseUrl,
         DYNAMODB_TABLE: table.tableName,
         VIDEO_ORIGINALS_BUCKET: videoOriginalsBucket.bucketName,
         VIDEO_DERIVED_BUCKET: videoDerivedBucket.bucketName,
@@ -233,18 +289,22 @@ export class ClipForgeStack extends Stack {
     );
 
     const functionUrl = apiFunction.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.NONE,
-      cors: {
-        allowedOrigins: [appOrigin],
-        allowedMethods: [lambda.HttpMethod.ALL],
-        allowedHeaders: ["Content-Type", "Authorization"],
-        exposedHeaders: ["ETag"]
-      }
+      authType: lambda.FunctionUrlAuthType.NONE
     });
 
     new CfnOutput(this, "FrontendUrl", {
       value: `https://${frontendDistribution.distributionDomainName}`
     });
+
+    if (appDomainName) {
+      new CfnOutput(this, "CustomFrontendUrl", {
+        value: `https://${appDomainName}`
+      });
+
+      new CfnOutput(this, "CustomWwwFrontendUrl", {
+        value: `https://www.${appDomainName}`
+      });
+    }
 
     new CfnOutput(this, "VideoDistributionDomain", {
       value: videoDistribution.distributionDomainName
@@ -258,11 +318,15 @@ export class ClipForgeStack extends Stack {
       value: table.tableName
     });
 
-    new CfnOutput(this, "VideoOriginalsBucket", {
+    new CfnOutput(this, "FrontendBucketName", {
+      value: frontendBucket.bucketName
+    });
+
+    new CfnOutput(this, "VideoOriginalsBucketName", {
       value: videoOriginalsBucket.bucketName
     });
 
-    new CfnOutput(this, "VideoDerivedBucket", {
+    new CfnOutput(this, "VideoDerivedBucketName", {
       value: videoDerivedBucket.bucketName
     });
   }

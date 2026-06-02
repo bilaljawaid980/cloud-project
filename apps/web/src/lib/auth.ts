@@ -16,7 +16,8 @@ interface AuthState {
   session: AuthSession | null;
   isHydrated: boolean;
   setSession: (session: AuthSession | null) => void;
-  login: (email: string, name?: string) => Promise<AuthSession>;
+  login: (email: string, password: string) => Promise<AuthSession>;
+  register: (email: string, password: string, name?: string) => Promise<AuthSession>;
   logout: () => void;
 }
 
@@ -32,11 +33,22 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     set({ session, isHydrated: true });
   },
-  login: async (email, name) => {
-    const session = await apiRequest<AuthSession>("/auth/dev-login", {
+  login: async (email, password) => {
+    const session = await apiRequest<AuthSession>("/auth/sign-in", {
       method: "POST",
       auth: false,
-      body: JSON.stringify({ email, name })
+      body: JSON.stringify({ email, password })
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    set({ session, isHydrated: true });
+    return session;
+  },
+  register: async (email, password, name) => {
+    const session = await apiRequest<AuthSession>("/auth/register", {
+      method: "POST",
+      auth: false,
+      body: JSON.stringify({ email, password, name })
     });
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session));

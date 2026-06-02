@@ -1,12 +1,12 @@
 # Security
 
-## Dev Auth Model
+## Auth Model
 
-MVP auth uses a developer login endpoint that issues `HS256` JWTs with `jose`. The API derives a stable `userId` from email via SHA-256 and never trusts ownership fields from request bodies.
+MVP auth uses email/password registration and sign-in endpoints that issue `HS256` JWTs with `jose`. The API derives a stable `userId` from email via SHA-256, stores salted PBKDF2-SHA256 password hashes, and never trusts ownership fields from request bodies.
 
-## Replacing Dev Auth With Cognito
+## Replacing Built-In Auth With Cognito
 
-Production migration can swap the dev login route for Cognito user pools or another IdP while keeping the rest of the authorization model mostly unchanged:
+Production migration can swap the built-in password auth for Cognito user pools or another IdP while keeping the rest of the authorization model mostly unchanged:
 
 - validate external JWTs in middleware
 - map identity claims to `userId`
@@ -62,7 +62,7 @@ View events hash IP and user-agent with SHA-256 and store only the first 32 hex 
 
 ## Production Hardening Checklist
 
-- replace dev auth with Cognito or another managed IdP
+- optionally replace built-in password auth with Cognito or another managed IdP
 - rotate `JWT_SECRET` and secrets through AWS Secrets Manager
 - add WAF and rate limits to the API URL or CloudFront layer
 - enable CloudFront signed URL key rotation

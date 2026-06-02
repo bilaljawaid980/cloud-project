@@ -77,7 +77,7 @@ export const Layout = (): JSX.Element => {
                 to="/"
                 className="inline-flex h-9 items-center rounded-xl border border-ink/10 bg-white/80 px-3.5 text-[13px] font-semibold text-ink shadow-[0_1px_2px_rgba(26,13,13,0.04)] transition-all hover:-translate-y-[1px] hover:bg-white hover:border-ember-700/30 focus-ring"
               >
-                Dev login
+                Sign in
               </Link>
             )}
           </div>

@@ -61,6 +61,7 @@ export const userProfileSchema: z.ZodType<UserProfile> = z.object({
   userId: z.string().min(1),
   email: z.string().email(),
   name: z.string().min(1).max(200).optional(),
+  passwordHash: z.string().min(1).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime()
 });

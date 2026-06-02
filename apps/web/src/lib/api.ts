@@ -33,7 +33,9 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
     }
   }
 
-  const response = await fetch(`${env.apiBaseUrl}${path}`, {
+  const baseUrl = env.apiBaseUrl.replace(/\/+$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const response = await fetch(`${baseUrl}${normalizedPath}`, {
     ...options,
     headers
   });

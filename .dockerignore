@@ -1,0 +1,13 @@
+.git
+.codex-runtime
+.clipforge-storage
+node_modules
+**/node_modules
+.env
+.env.*
+dist
+apps/*/dist
+infra/cdk.out
+infra/dist
+infra/node_modules
+cdk.out

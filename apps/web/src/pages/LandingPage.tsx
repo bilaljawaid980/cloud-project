@@ -42,9 +42,12 @@ const trustedBy = ["Figma", "Notion", "Linear", "Vercel", "Stripe"];
 
 export const LandingPage = (): JSX.Element => {
   const login = useAuthStore((state) => state.login);
+  const register = useAuthStore((state) => state.register);
   const session = useAuthStore((state) => state.session);
-  const [email, setEmail] = useState("demo@clipforge.dev");
-  const [name, setName] = useState("ClipForge Demo");
+  const [authMode, setAuthMode] = useState<"register" | "sign-in">("register");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,9 +56,13 @@ export const LandingPage = (): JSX.Element => {
     setError(null);
 
     try {
-      await login(email, name || undefined);
+      if (authMode === "register") {
+        await register(email, password, name || undefined);
+      } else {
+        await login(email, password);
+      }
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : "Login failed.");
+      setError(loginError instanceof Error ? loginError.message : "Authentication failed.");
     } finally {
       setIsSubmitting(false);
     }
@@ -132,17 +139,19 @@ export const LandingPage = (): JSX.Element => {
 
           <div className="relative">
             <div className="flex items-center justify-between">
-              <span className="eyebrow">Dev access</span>
+              <span className="eyebrow">Account access</span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-ember-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-ember-700 ring-1 ring-ember-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-ember-600 shadow-[0_0_8px_rgba(122,16,24,0.6)] animate-pulse-dot" />
                 Open
               </span>
             </div>
             <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-ink">
-              Sign in to start.
+              {authMode === "register" ? "Create your account." : "Sign in to your account."}
             </h2>
             <p className="mt-2 text-[14px] text-ink-500">
-              No password — we mint a workspace and a token for you in a single tap.
+              {authMode === "register"
+                ? "Create your own workspace with an email and password."
+                : "Use the email and password you created earlier."}
             </p>
 
             {session ? (
@@ -163,6 +172,26 @@ export const LandingPage = (): JSX.Element => {
                 onSubmit={(event) => { event.preventDefault(); void handleLogin(); }}
                 className="mt-7 space-y-4"
               >
+                <div className="grid grid-cols-2 rounded-xl border border-ink/10 bg-white/75 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode("register")}
+                    className={`h-9 rounded-lg text-[12.5px] font-semibold transition-colors focus-ring ${
+                      authMode === "register" ? "bg-ink text-white" : "text-ink-500 hover:text-ink"
+                    }`}
+                  >
+                    Create account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode("sign-in")}
+                    className={`h-9 rounded-lg text-[12.5px] font-semibold transition-colors focus-ring ${
+                      authMode === "sign-in" ? "bg-ink text-white" : "text-ink-500 hover:text-ink"
+                    }`}
+                  >
+                    Sign in
+                  </button>
+                </div>
                 <Field label="Work email" htmlFor="email">
                   <input
                     id="email"
@@ -170,16 +199,33 @@ export const LandingPage = (): JSX.Element => {
                     onChange={(event) => setEmail(event.target.value)}
                     type="email"
                     autoComplete="email"
-                    placeholder="you@studio.com"
+                    placeholder="you@example.com"
+                    required
                     className="h-11 w-full rounded-xl border border-ink/10 bg-white px-3.5 text-[14px] text-ink placeholder:text-ink-300 focus-ring"
                   />
                 </Field>
-                <Field label="Display name" htmlFor="name" optional>
+                {authMode === "register" ? (
+                  <Field label="Display name" htmlFor="name" optional>
+                    <input
+                      id="name"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      autoComplete="name"
+                      placeholder="Your name"
+                      className="h-11 w-full rounded-xl border border-ink/10 bg-white px-3.5 text-[14px] text-ink placeholder:text-ink-300 focus-ring"
+                    />
+                  </Field>
+                ) : null}
+                <Field label="Password" htmlFor="password">
                   <input
-                    id="name"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Studio team"
+                    id="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    type="password"
+                    autoComplete={authMode === "register" ? "new-password" : "current-password"}
+                    placeholder={authMode === "register" ? "At least 8 characters" : "Your password"}
+                    required
+                    minLength={authMode === "register" ? 8 : 1}
                     className="h-11 w-full rounded-xl border border-ink/10 bg-white px-3.5 text-[14px] text-ink placeholder:text-ink-300 focus-ring"
                   />
                 </Field>
@@ -197,11 +243,13 @@ export const LandingPage = (): JSX.Element => {
                   className="w-full"
                   type="submit"
                 >
-                  {isSubmitting ? "Signing in…" : "Sign in with dev login"}
+                  {isSubmitting
+                    ? authMode === "register" ? "Creating account…" : "Signing in…"
+                    : authMode === "register" ? "Create account" : "Sign in"}
                 </Button>
 
                 <p className="text-center text-[11px] uppercase tracking-[0.2em] text-ink-400">
-                  Local-only · MVP build
+                  Password protected · MVP build
                 </p>
               </form>
             )}

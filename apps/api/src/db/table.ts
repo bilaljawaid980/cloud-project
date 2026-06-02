@@ -7,7 +7,8 @@ const credentials =
   config.awsAccessKeyId && config.awsSecretAccessKey
     ? {
         accessKeyId: config.awsAccessKeyId,
-        secretAccessKey: config.awsSecretAccessKey
+        secretAccessKey: config.awsSecretAccessKey,
+        sessionToken: config.awsSessionToken
       }
     : undefined;
 
