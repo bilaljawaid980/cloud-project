@@ -6,8 +6,9 @@ Live application:
 
 - App: `https://clipforged.xyz`
 - App www alias: `https://www.clipforged.xyz`
-- API: `https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/`
-- Health check: `https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/health`
+- API: `https://api.clipforged.xyz`
+- Lambda/API alias: `https://lambda.clipforged.xyz`
+- Health check: `https://api.clipforged.xyz/health`
 
 ## Tech Stack
 
@@ -22,6 +23,7 @@ Live application:
 | File storage | S3 | Static frontend assets, original uploaded recordings, thumbnails/derived assets. |
 | CDN | CloudFront | Public HTTPS frontend delivery and private S3-origin video distribution. |
 | API compute | AWS Lambda container image | Runs the Bun/Hono API through AWS Lambda Web Adapter. |
+| API custom domain | CloudFront + Route53 | Proxies `api.clipforged.xyz` and `lambda.clipforged.xyz` to the Lambda Function URL. |
 | Queue | SQS + DLQ | Reserved for future async video processing jobs. |
 | Infrastructure | AWS CDK v2 | Defines and deploys all AWS resources. |
 | Domain/DNS | Porkbun + Route53 | Porkbun domain delegates to Route53, Route53 points root/www to CloudFront. |
@@ -46,7 +48,8 @@ flowchart TD
   User[User Browser] --> WebCF[CloudFront Frontend]
   WebCF --> WebS3[S3 Frontend Bucket]
 
-  User --> ApiUrl[Lambda Function URL]
+  User --> ApiCF[CloudFront API Distribution]
+  ApiCF --> ApiUrl[Lambda Function URL Origin]
   ApiUrl --> ApiLambda[Bun/Hono API Lambda Container]
 
   ApiLambda --> Dynamo[DynamoDB ClipForgeTable]
@@ -75,7 +78,10 @@ flowchart TD
 | Route53 hosted zone | `clipforged.xyz` / `Z102718032TZCRUXUMFUO` | DNS zone for the custom domain. |
 | Frontend CloudFront | `d1ny7x1rl0edk2.cloudfront.net` | Serves the React app. |
 | Custom domains | `clipforged.xyz`, `www.clipforged.xyz` | Friendly HTTPS app URLs. |
-| API Function URL | `xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws` | Public API endpoint. |
+| API custom domain | `api.clipforged.xyz` | Primary public backend endpoint used by the frontend. |
+| Lambda/API alias | `lambda.clipforged.xyz` | Friendly alias for the Lambda-backed API. |
+| API CloudFront | `d397z28rh4cd34.cloudfront.net` / `E1FSD4RL5Y7JKU` | Proxies API requests to the Lambda Function URL origin. |
+| Raw Lambda Function URL | `xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws` | Origin endpoint behind API CloudFront. |
 | DynamoDB table | `ClipForgeTable` | Main NoSQL database. |
 | Frontend bucket | `clipforgestack-frontendbucketefe2e19c-5wgb7faigkjr` | Compiled Vite static files. |
 | Original videos bucket | `clipforgestack-videooriginalsbucketab6788dc-sypenuqjputq` | Raw uploaded recordings. |
@@ -108,6 +114,8 @@ The domain was purchased in Porkbun, but DNS is managed by AWS Route53.
 4. ACM validates ownership by creating DNS validation records in Route53.
 5. CloudFront uses that certificate and accepts both custom domains.
 6. Route53 creates alias A records from root and www to CloudFront.
+7. CDK also creates an API CloudFront distribution and aliases `api.clipforged.xyz` and `lambda.clipforged.xyz` to it.
+8. The frontend is built with `API_BASE_URL=https://api.clipforged.xyz`, so browser API calls use the clean API domain.
 
 ## Authentication And Password Flow
 
@@ -398,8 +406,10 @@ cd infra
 $env:NODE_ENV='production'
 $env:APP_DOMAIN_NAME='clipforged.xyz'
 $env:APP_HOSTED_ZONE_NAME='clipforged.xyz'
+$env:API_DOMAIN_NAME='api.clipforged.xyz'
+$env:LAMBDA_DOMAIN_NAME='lambda.clipforged.xyz'
 $env:APP_ORIGIN='https://clipforged.xyz,https://www.clipforged.xyz,https://d1ny7x1rl0edk2.cloudfront.net'
-$env:API_BASE_URL='https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/'
+$env:API_BASE_URL='https://api.clipforged.xyz'
 $env:JWT_SECRET='<32-plus-character-secret>'
 bunx aws-cdk deploy --require-approval never
 ```
@@ -408,7 +418,7 @@ Build and upload frontend:
 
 ```powershell
 cd ..
-$env:API_BASE_URL='https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/'
+$env:API_BASE_URL='https://api.clipforged.xyz'
 $env:DEV_MODE='false'
 bun run build:web
 aws s3 sync apps\web\dist s3://clipforgestack-frontendbucketefe2e19c-5wgb7faigkjr --delete
@@ -420,7 +430,8 @@ Verify deployment:
 ```powershell
 Invoke-WebRequest -Uri https://clipforged.xyz -UseBasicParsing
 Invoke-WebRequest -Uri https://www.clipforged.xyz -UseBasicParsing
-Invoke-WebRequest -Uri https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/health -UseBasicParsing
+Invoke-WebRequest -Uri https://api.clipforged.xyz/health -UseBasicParsing
+Invoke-WebRequest -Uri https://lambda.clipforged.xyz/health -UseBasicParsing
 ```
 
 ## Git Commands
@@ -470,10 +481,11 @@ The deployed app was tested after custom-domain deployment:
 | --- | --- |
 | `https://clipforged.xyz` | `200 OK` |
 | `https://www.clipforged.xyz` | `200 OK` |
-| API health | `200 OK` |
+| `https://api.clipforged.xyz/health` | `200 OK` |
+| `https://lambda.clipforged.xyz/health` | `200 OK` |
 | CORS from root domain | `204 No Content` |
 | CORS from www domain | `204 No Content` |
 | Account registration | `201 Created` |
 | Account sign-in | `200 OK` |
 | Wrong password rejection | `401` |
-| Previous multipart upload/playback smoke test | Passed |
+| Multipart upload/playback through `api.clipforged.xyz` | Passed |

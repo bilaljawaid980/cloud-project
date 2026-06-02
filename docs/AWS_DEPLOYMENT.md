@@ -20,8 +20,10 @@ cdk bootstrap
 cd infra
 APP_DOMAIN_NAME=clipforged.xyz \
 APP_HOSTED_ZONE_NAME=clipforged.xyz \
+API_DOMAIN_NAME=api.clipforged.xyz \
+LAMBDA_DOMAIN_NAME=lambda.clipforged.xyz \
 APP_ORIGIN=https://clipforged.xyz,https://www.clipforged.xyz,https://d1ny7x1rl0edk2.cloudfront.net \
-API_BASE_URL=https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/ \
+API_BASE_URL=https://api.clipforged.xyz \
 JWT_SECRET=replace-with-a-long-secret \
 bunx aws-cdk deploy --require-approval never
 ```
@@ -30,7 +32,7 @@ bunx aws-cdk deploy --require-approval never
 
 ```bash
 bun install
-API_BASE_URL=https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/ \
+API_BASE_URL=https://api.clipforged.xyz \
 DEV_MODE=false \
 bun run build:web
 ```
@@ -68,7 +70,7 @@ Set these for the API Lambda:
 - `NODE_ENV=production`
 - `DEV_MODE=false`
 - `APP_ORIGIN=https://clipforged.xyz,https://www.clipforged.xyz,https://d1ny7x1rl0edk2.cloudfront.net`
-- `API_BASE_URL=https://xmfe23zrnivkzaomrezacvyhve0wpank.lambda-url.us-east-1.on.aws/`
+- `API_BASE_URL=https://api.clipforged.xyz`
 - `DYNAMODB_TABLE=ClipForgeTable`
 - `VIDEO_ORIGINALS_BUCKET=<bucket>`
 - `VIDEO_DERIVED_BUCKET=<bucket>`
@@ -78,7 +80,7 @@ Set these for the API Lambda:
 
 `AWS_REGION` is provided automatically by Lambda and should not be manually set in the Lambda environment.
 
-For the current custom domain, Porkbun delegates `clipforged.xyz` to Route53 hosted zone `Z102718032TZCRUXUMFUO`. CDK manages the ACM certificate, CloudFront aliases, and Route53 alias records for `clipforged.xyz` and `www.clipforged.xyz`.
+For the current custom domains, Porkbun delegates `clipforged.xyz` to Route53 hosted zone `Z102718032TZCRUXUMFUO`. CDK manages ACM certificates, CloudFront aliases, and Route53 alias records for `clipforged.xyz`, `www.clipforged.xyz`, `api.clipforged.xyz`, and `lambda.clipforged.xyz`.
 
 Optional:
 

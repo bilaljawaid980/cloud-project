@@ -3,6 +3,7 @@ import * as path from "node:path";
 import {
   CfnOutput,
   Duration,
+  Fn,
   RemovalPolicy,
   Stack,
   type StackProps
@@ -34,8 +35,23 @@ export class ClipForgeStack extends Stack {
     const jwtSecret = process.env.JWT_SECRET ?? "replace-me-with-a-32-plus-char-secret";
     const appDomainName = process.env.APP_DOMAIN_NAME;
     const appHostedZoneName = process.env.APP_HOSTED_ZONE_NAME ?? appDomainName;
+    const apiDomainName =
+      process.env.API_DOMAIN_NAME ?? (appDomainName ? `api.${appDomainName}` : undefined);
+    const lambdaDomainName =
+      process.env.LAMBDA_DOMAIN_NAME ?? (appDomainName ? `lambda.${appDomainName}` : undefined);
     const repoRoot = path.join(__dirname, "../..");
     const appDomainAliases = appDomainName ? [appDomainName, `www.${appDomainName}`] : [];
+    const apiDomainAliases = [apiDomainName, lambdaDomainName].filter(
+      (domainName): domainName is string => Boolean(domainName)
+    );
+    const toHostedZoneRecordName = (domainName: string) => {
+      if (!appHostedZoneName) {
+        return domainName;
+      }
+
+      const suffix = `.${appHostedZoneName}`;
+      return domainName.endsWith(suffix) ? domainName.slice(0, -suffix.length) : domainName;
+    };
     const appHostedZone =
       appDomainName && appHostedZoneName
         ? route53.HostedZone.fromLookup(this, "AppHostedZone", {
@@ -47,6 +63,14 @@ export class ClipForgeStack extends Stack {
         ? new acm.Certificate(this, "FrontendCertificate", {
             domainName: appDomainName,
             subjectAlternativeNames: [`www.${appDomainName}`],
+            validation: acm.CertificateValidation.fromDns(appHostedZone)
+          })
+        : undefined;
+    const apiCertificate =
+      apiDomainName && lambdaDomainName && appHostedZone
+        ? new acm.Certificate(this, "ApiCertificate", {
+            domainName: apiDomainName,
+            subjectAlternativeNames: [lambdaDomainName],
             validation: acm.CertificateValidation.fromDns(appHostedZone)
           })
         : undefined;
@@ -292,6 +316,42 @@ export class ClipForgeStack extends Stack {
       authType: lambda.FunctionUrlAuthType.NONE
     });
 
+    const apiDistribution =
+      apiDomainAliases.length > 0 && apiCertificate && appHostedZone
+        ? new cloudfront.Distribution(this, "ApiDistribution", {
+            domainNames: apiDomainAliases,
+            certificate: apiCertificate,
+            defaultBehavior: {
+              origin: new origins.HttpOrigin(Fn.select(2, Fn.split("/", functionUrl.url)), {
+                protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY
+              }),
+              allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+              cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+              originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+              viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+            },
+            priceClass: cloudfront.PriceClass.PRICE_CLASS_100
+          })
+        : undefined;
+
+    if (apiDistribution && appHostedZone) {
+      if (apiDomainName) {
+        new route53.ARecord(this, "ApiAliasRecord", {
+          zone: appHostedZone,
+          recordName: toHostedZoneRecordName(apiDomainName),
+          target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(apiDistribution))
+        });
+      }
+
+      if (lambdaDomainName) {
+        new route53.ARecord(this, "LambdaAliasRecord", {
+          zone: appHostedZone,
+          recordName: toHostedZoneRecordName(lambdaDomainName),
+          target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(apiDistribution))
+        });
+      }
+    }
+
     new CfnOutput(this, "FrontendUrl", {
       value: `https://${frontendDistribution.distributionDomainName}`
     });
@@ -313,6 +373,18 @@ export class ClipForgeStack extends Stack {
     new CfnOutput(this, "ApiUrl", {
       value: functionUrl.url
     });
+
+    if (apiDomainName) {
+      new CfnOutput(this, "CustomApiUrl", {
+        value: `https://${apiDomainName}`
+      });
+    }
+
+    if (lambdaDomainName) {
+      new CfnOutput(this, "CustomLambdaUrl", {
+        value: `https://${lambdaDomainName}`
+      });
+    }
 
     new CfnOutput(this, "TableName", {
       value: table.tableName
