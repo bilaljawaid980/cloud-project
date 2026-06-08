@@ -1,6 +1,6 @@
 # ClipForge Architecture
 
-## System Overview
+# System Overview
 
 ClipForge is a Bun monorepo built around one core rule: large video payloads never pass through the API. The browser records with native media APIs, uploads parts directly to S3 with presigned URLs, and the API only coordinates metadata, auth, access control, and playback signing.
 
