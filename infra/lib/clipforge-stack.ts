@@ -356,6 +356,10 @@ export class ClipForgeStack extends Stack {
       value: `https://${frontendDistribution.distributionDomainName}`
     });
 
+    new CfnOutput(this, "FrontendDistributionId", {
+      value: frontendDistribution.distributionId
+    });
+
     if (appDomainName) {
       new CfnOutput(this, "CustomFrontendUrl", {
         value: `https://${appDomainName}`
@@ -368,6 +372,10 @@ export class ClipForgeStack extends Stack {
 
     new CfnOutput(this, "VideoDistributionDomain", {
       value: videoDistribution.distributionDomainName
+    });
+
+    new CfnOutput(this, "VideoDistributionId", {
+      value: videoDistribution.distributionId
     });
 
     new CfnOutput(this, "ApiUrl", {
@@ -383,6 +391,16 @@ export class ClipForgeStack extends Stack {
     if (lambdaDomainName) {
       new CfnOutput(this, "CustomLambdaUrl", {
         value: `https://${lambdaDomainName}`
+      });
+    }
+
+    if (apiDistribution) {
+      new CfnOutput(this, "ApiDistributionId", {
+        value: apiDistribution.distributionId
+      });
+
+      new CfnOutput(this, "ApiDistributionDomain", {
+        value: apiDistribution.distributionDomainName
       });
     }
 

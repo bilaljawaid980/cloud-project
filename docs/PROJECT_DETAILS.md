@@ -1,8 +1,10 @@
 # ClipForge Project Details
 
+> **Deployment status:** Decommissioned on June 4, 2026. The AWS stacks, application data, DNS hosted zone, certificates, logs, and CDK bootstrap resources described below were deleted. The URLs and resource names remain in this document as a historical deployment record.
+
 ClipForge is a serverless screen-recording and video-sharing application. Users create an account, sign in with a password, record a video in the browser, upload it directly to S3, and share/play it back through signed URLs.
 
-Live application:
+Former live application:
 
 - App: `https://clipforged.xyz`
 - App www alias: `https://www.clipforged.xyz`
@@ -26,6 +28,7 @@ Live application:
 | API custom domain | CloudFront + Route53 | Proxies `api.clipforged.xyz` and `lambda.clipforged.xyz` to the Lambda Function URL. |
 | Queue | SQS + DLQ | Reserved for future async video processing jobs. |
 | Infrastructure | AWS CDK v2 | Defines and deploys all AWS resources. |
+| CI/CD | GitHub Actions | Runs typecheck, deploys CDK, publishes frontend assets, and invalidates CloudFront on pushes to `main`. |
 | Domain/DNS | Porkbun + Route53 | Porkbun domain delegates to Route53, Route53 points root/www to CloudFront. |
 | Certificate | AWS Certificate Manager | HTTPS certificate for `clipforged.xyz` and `www.clipforged.xyz`. |
 
@@ -40,6 +43,7 @@ Live application:
 | `packages/shared` | Shared TypeScript types, schemas, constants. |
 | `infra` | AWS CDK app and stack definition. |
 | `docs` | Architecture, security, cost, deployment, and project documentation. |
+| `.github/workflows/deploy.yml` | GitHub Actions CI/CD workflow for production deployment. |
 
 ## AWS Architecture
 
@@ -399,6 +403,8 @@ docker build -f apps/api/Dockerfile.lambda -t clipforge-api-lambda .
 ```
 
 ## AWS Deploy Commands
+
+Production deployment is now automated with GitHub Actions. See `docs/CI_CD.md`.
 
 Deploy infrastructure with custom domain:
 

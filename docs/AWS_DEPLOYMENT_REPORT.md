@@ -1,12 +1,14 @@
 # ClipForge AWS Deployment Report
 
+> **Deployment status:** Decommissioned on June 4, 2026. `ClipForgeStack`, `CDKToolkit`, retained S3 buckets, DynamoDB data, Route53 hosted zone, ACM certificates, CloudWatch logs, and deployment assets were deleted. Resource names and URLs below are retained as a historical deployment report.
+
 This document explains how ClipForge was deployed on AWS, which stack/resources are used, what each resource does, and the full recording/upload/playback flow.
 
 ## Deployment Summary
 
 ClipForge was deployed with AWS CDK in account `142517506886`, region `us-east-1`.
 
-Live deployment:
+Former live deployment:
 
 - Custom frontend URL: `https://clipforged.xyz`
 - Custom www frontend URL: `https://www.clipforged.xyz`

@@ -16,6 +16,8 @@ cdk bootstrap
 
 ## Deploy The Stack
 
+Preferred production deployment is now GitHub Actions. See `docs/CI_CD.md`.
+
 ```bash
 cd infra
 APP_DOMAIN_NAME=clipforged.xyz \
